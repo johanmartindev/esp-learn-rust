@@ -15,6 +15,7 @@ use esp_hal::{
     time::{Duration, Instant},
 };
 use esp_radio::ble::controller::BleConnector;
+use esp_radio::wifi::{Config as WifiConfig, sta::StationConfig};
 
 use log::error;
 use log::info;
@@ -44,6 +45,9 @@ fn main() -> ! {
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
+    let wifi_ssid = option_env!("WIFI_SSID").expect("Set WIFI_SSID in your local environment");
+    let wifi_password =
+        option_env!("WIFI_PASSWORD").expect("Set WIFI_PASSWORD in your local environment");
 
     // The following pins are used to bootstrap the chip. They are available
     // for use, but check the datasheet of the module for more information on them.
@@ -70,9 +74,19 @@ fn main() -> ! {
     let sw_interrupt =
         esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
     esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
-    let (mut _wifi_controller, _interfaces) =
+    let (mut wifi_controller, _interfaces) =
         esp_radio::wifi::new(peripherals.WIFI, Default::default())
             .expect("Failed to initialize Wi-Fi controller");
+
+    let wifi_config = WifiConfig::Station(
+        StationConfig::default()
+            .with_ssid(wifi_ssid)
+            .with_password(wifi_password.into()),
+    );
+    wifi_controller
+        .set_config(&wifi_config)
+        .expect("Failed to configure Wi-Fi station");
+
     let _connector = BleConnector::new(peripherals.BT, Default::default());
 
     let mut led = Output::new(peripherals.GPIO22, Level::Low, Default::default());
