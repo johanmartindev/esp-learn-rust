@@ -2,6 +2,12 @@ fn main() {
     linker_be_nice();
     // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+
+    if std::env::var("TARGET").as_deref() == Ok("xtensa-esp32-none-elf") {
+        // Work around the esp-wifi-sys-esp32 archive order so coexist can resolve
+        // symbols from libbtdm_app.a during the final link step.
+        println!("cargo:rustc-link-arg=-lbtdm_app");
+    }
 }
 
 fn linker_be_nice() {
